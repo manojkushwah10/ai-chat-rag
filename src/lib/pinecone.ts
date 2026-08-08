@@ -4,7 +4,7 @@ import {
   type Index,
   type RecordMetadata,
 } from "@pinecone-database/pinecone";
-import { EMBEDDING_DIMENSION } from "./embeddings";
+import { EMBEDDING_DIMENSION } from "./constants";
 
 const INDEX_NAME = process.env.PINECONE_INDEX_NAME || "rag-chat";
 

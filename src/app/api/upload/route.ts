@@ -51,14 +51,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const vectors = await embedTexts(chunks);
-  const documentId = randomUUID();
-  await upsertChunks(documentId, file.name, chunks, vectors);
+  let response: UploadResponse;
+  try {
+    const vectors = await embedTexts(chunks);
+    const documentId = randomUUID();
+    await upsertChunks(documentId, file.name, chunks, vectors);
+    response = { documentId, filename: file.name, chunkCount: chunks.length };
+  } catch (error) {
+    console.error("Upload processing failed:", error);
+    return NextResponse.json(
+      { error: "Failed to process the document. Please try again." },
+      { status: 500 }
+    );
+  }
 
-  const response: UploadResponse = {
-    documentId,
-    filename: file.name,
-    chunkCount: chunks.length,
-  };
   return NextResponse.json(response);
 }

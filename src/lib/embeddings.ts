@@ -1,7 +1,6 @@
 import { pipeline, type FeatureExtractionPipeline } from "@huggingface/transformers";
 
 const MODEL_ID = "Xenova/all-MiniLM-L6-v2";
-export const EMBEDDING_DIMENSION = 384;
 
 let pipelinePromise: Promise<FeatureExtractionPipeline> | null = null;
 

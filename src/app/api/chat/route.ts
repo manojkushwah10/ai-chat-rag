@@ -52,15 +52,24 @@ export async function POST(req: NextRequest) {
   const safeLocalDateTime =
     typeof localDateTime === "string" ? localDateTime.slice(0, MAX_LOCAL_DATETIME_LENGTH) : undefined;
 
-  const queryVector = await embedText(question);
-  const matches = await queryChunks(documentId, queryVector, 5);
+  let stream: Awaited<ReturnType<typeof streamChatCompletion>>;
+  try {
+    const queryVector = await embedText(question);
+    const matches = await queryChunks(documentId, queryVector, 5);
 
-  const context = matches
-    .map((match) => match.metadata?.text)
-    .filter((text): text is string => Boolean(text))
-    .join("\n\n---\n\n");
+    const context = matches
+      .map((match) => match.metadata?.text)
+      .filter((text): text is string => Boolean(text))
+      .join("\n\n---\n\n");
 
-  const stream = await streamChatCompletion(context, question, safeHistory, safeLocalDateTime);
+    stream = await streamChatCompletion(context, question, safeHistory, safeLocalDateTime);
+  } catch (error) {
+    console.error("Chat request failed:", error);
+    return NextResponse.json(
+      { error: "Failed to process your question. Please try again." },
+      { status: 500 }
+    );
+  }
 
   const encoder = new TextEncoder();
   const send = (controller: ReadableStreamDefaultController<Uint8Array>, event: ChatStreamEvent) => {
