@@ -4,17 +4,33 @@ import { extractText } from "@/lib/parsers";
 import { splitText } from "@/lib/chunking";
 import { embedTexts } from "@/lib/embeddings";
 import { upsertChunks } from "@/lib/pinecone";
+import { checkRateLimit, getClientIp, rateLimitedResponse } from "@/lib/rateLimit";
 import type { UploadResponse } from "@/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(`upload:${ip}`, { limit: 5, windowMs: 10 * 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return rateLimitedResponse(rateLimit.retryAfterSeconds);
+  }
+
   const formData = await req.formData();
   const file = formData.get("file");
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return NextResponse.json(
+      { error: "File is too large. The limit is 10MB." },
+      { status: 413 }
+    );
   }
 
   let text: string;

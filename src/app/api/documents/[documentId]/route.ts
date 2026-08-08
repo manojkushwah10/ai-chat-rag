@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteDocument } from "@/lib/pinecone";
+import { checkRateLimit, getClientIp, rateLimitedResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ documentId: string }> }
 ) {
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(`delete:${ip}`, { limit: 20, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return rateLimitedResponse(rateLimit.retryAfterSeconds);
+  }
+
   const { documentId } = await params;
 
-  if (!documentId) {
-    return NextResponse.json({ error: "documentId is required" }, { status: 400 });
+  if (!documentId || !UUID_RE.test(documentId)) {
+    return NextResponse.json({ error: "Invalid documentId" }, { status: 400 });
   }
 
   try {

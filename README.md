@@ -68,6 +68,17 @@ Open [http://localhost:3000](http://localhost:3000).
 - `npm run start` — run the production build
 - `npm run lint` — ESLint
 
+## Rate limiting & abuse protection
+
+This is built for a small testing deployment, not a public production service — it calls two metered APIs (Groq, Pinecone) and runs real compute (PDF parsing, local embeddings) per request, so it's guarded against accidental or malicious overuse:
+
+- **Rate limits** (per IP, in-memory): 5 uploads / 10 min, 20 chat messages / min, 20 deletes / min. Exceeding one returns `429` with a `Retry-After` header and a friendly error message.
+- **Upload size cap**: 10MB per file, rejected before parsing.
+- **Input bounds on chat**: questions are capped at 2000 characters; the conversation history sent with each request is capped to the last 40 turns, each truncated to 4000 characters — this protects against a client bypassing the UI and sending an artificially huge payload to run up token costs.
+- **`documentId` validation**: requests with a malformed document ID are rejected before touching Pinecone.
+
+The rate limiter is intentionally simple: an in-memory map, scoped to a single running process. That means it resets on every redeploy/cold start and isn't shared across multiple serverless instances of the same app — good enough to stop casual abuse during testing, not a substitute for a shared store (e.g. Upstash Redis) if this ever needs to hold up in production.
+
 ## Known limitations
 
 - No server-side database — document/conversation metadata lives in the browser's `localStorage`, so it's per-device, not synced across devices.
