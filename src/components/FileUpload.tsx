@@ -25,10 +25,13 @@ export function FileUpload({ onUploaded }: Props) {
       formData.append("file", file);
 
       const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
-      if (!res.ok) {
-        throw new Error(data.error || "Upload failed");
+      if (!res.ok || !data) {
+        throw new Error(
+          data?.error ||
+            `Upload failed (${res.status}). The server may have timed out or hit a size limit.`
+        );
       }
 
       onUploaded(data as UploadResponse);
