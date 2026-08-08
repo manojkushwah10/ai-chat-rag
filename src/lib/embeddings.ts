@@ -1,4 +1,11 @@
-import { pipeline, type FeatureExtractionPipeline } from "@huggingface/transformers";
+import { pipeline, env, type FeatureExtractionPipeline } from "@huggingface/transformers";
+import os from "os";
+import path from "path";
+
+// The library's default cache dir ("./.cache") is a relative path assuming a writable
+// working directory. Serverless platforms (Vercel, etc.) only allow writes to the OS temp
+// directory, so point the model cache there explicitly to avoid an EROFS/EACCES crash.
+env.cacheDir = path.join(os.tmpdir(), "transformers-cache");
 
 const MODEL_ID = "Xenova/all-MiniLM-L6-v2";
 
