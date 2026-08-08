@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
   let text: string;
   try {
     text = await extractText(file);
-  } catch {
+  } catch (error) {
+    console.error(`Failed to extract text from "${file.name}":`, error);
     return NextResponse.json(
       { error: "Unsupported or unreadable file type. Use PDF, TXT, or MD." },
       { status: 400 }
