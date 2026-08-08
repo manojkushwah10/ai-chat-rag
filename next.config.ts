@@ -8,11 +8,16 @@ const nextConfig: NextConfig = {
     "onnxruntime-node",
     "sharp",
   ],
-  // onnxruntime-node's native binaries are loaded via a dynamic, platform-specific require()
-  // that Next.js's automatic file tracing can miss when packaging serverless functions —
-  // force-include them for the routes that actually run the embedding model.
+  // onnxruntime-node's native binaries and pdfjs-dist's worker scripts are both loaded via
+  // dynamic, non-static require()/import() calls that Next.js's automatic file tracing can
+  // miss when packaging serverless functions — force-include them for the routes that need
+  // them (embeddings run in both upload and chat; PDF parsing only in upload).
   outputFileTracingIncludes: {
-    "/api/upload": ["./node_modules/onnxruntime-node/bin/napi-v6/**/*"],
+    "/api/upload": [
+      "./node_modules/onnxruntime-node/bin/napi-v6/**/*",
+      "./node_modules/pdf-parse/**/*",
+      "./node_modules/pdfjs-dist/**/*",
+    ],
     "/api/chat": ["./node_modules/onnxruntime-node/bin/napi-v6/**/*"],
   },
 };
