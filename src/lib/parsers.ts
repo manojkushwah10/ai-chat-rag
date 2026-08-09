@@ -4,12 +4,15 @@ export async function extractText(file: File): Promise<string> {
   if (name.endsWith(".pdf")) {
     const { PDFParse } = await import("pdf-parse");
 
-    // pdfjs-dist's automatic worker-script resolution depends on filesystem layout that
-    // differs between local dev and a bundled serverless deployment; point it at the real
-    // file explicitly rather than relying on that guesswork.
-    const { createRequire } = await import("module");
-    const require = createRequire(import.meta.url);
-    PDFParse.setWorker(require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs"));
+    // In Node.js, pdfjs-dist never spins up a real Worker thread — it falls back to a
+    // "fake worker" that dynamically imports its own worker script by path at runtime.
+    // Bundlers (Turbopack in dev, webpack in serverless builds) intercept that dynamic
+    // import and rewrite it in ways the runtime path string can't satisfy. Statically
+    // importing the worker module ourselves and registering it as the well-known global
+    // short-circuits that lookup entirely, since pdfjs checks for it before ever
+    // attempting the dynamic import.
+    const pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+    (globalThis as unknown as { pdfjsWorker?: unknown }).pdfjsWorker = pdfjsWorker;
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const parser = new PDFParse({ data: buffer });
